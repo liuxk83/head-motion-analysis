@@ -1,14 +1,24 @@
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from torch.utils.data import Dataset
 from scipy.ndimage import gaussian_filter1d
 
-import torch
-from torch.utils.data import Dataset
+def load_data(data_path = '../data/framewise_displacement_data.npz'):
+    data = np.load(data_path, allow_pickle=True)
+    
+    # Convert the loaded data to a dictionary
+    data_dict = {key: data[key].item() for key in data}
 
-MAX_LEN = 100  # truncate / zero-pad sequences to this length
+    pd_keys, pd_removed = filter_valid_subjects(data_dict, 'PD')
+    control_keys, control_removed = filter_valid_subjects(data_dict, 'Control')
+
+    print(f"Loaded {len(pd_keys)}/{(len(pd_keys) + len(control_keys))} PD subjects and {len(control_keys)}/{(len(control_keys) + len(control_keys))} Control subjects")
+
+    return data_dict, pd_keys, control_keys
 
 # Filter and print removal counts for PD and Control groups
-def filter_valid_subjects(data_dict, group_name, print_info=True):
+def filter_valid_subjects(data_dict, group_name):
     valid_keys = []
     removed_count = 0
 
@@ -23,10 +33,7 @@ def filter_valid_subjects(data_dict, group_name, print_info=True):
             continue
         valid_keys.append(key)
 
-    if print_info:
-        print(f"{group_name}: Removed {removed_count} out of {len([v for v in data_dict.values() if v['participant_info'].get('group') == group_name])}")
-    
-    return valid_keys
+    return valid_keys, removed_count
 
 # Plot examples
 def plot_metrics(data_dict, pd_keys, control_keys, num_examples=5):
@@ -133,7 +140,8 @@ def plot_standardized_dvars(data_dict, pd_keys, control_keys, num_examples=5):
 class MotionDataset(Dataset):
     """Dataset returning (T, 3) float32 tensor + binary label."""
 
-    def __init__(self, data_dict, keys):
+    def __init__(self, data_dict, keys, MAX_LEN=200):
+        self.MAX_LEN = MAX_LEN
         self.samples = []
         for k in keys:
             rec = data_dict[k]
