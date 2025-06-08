@@ -324,27 +324,35 @@ def plot_standardized_dvars(data_dict, pd_keys, control_keys, num_examples=5):
 
 
 class MotionDataset(Dataset):
-    """Dataset returning (T, 3) float32 tensor + binary label."""
+    """Dataset returning (T,) float32 tensor for a single metric + label, supporting multiple datasets with flexible metric mapping."""
 
-    def __init__(self, data_dict, keys, MAX_LEN=200):
-        self.MAX_LEN = MAX_LEN
+    def __init__(self, datasets, metric_map, max_len=200):
+        """
+        datasets: list of (data_dict, keys, label) tuples
+        metric_map: list of metric names (str), one per dataset
+        max_len: int, pad/truncate all sequences to this length
+        """
+        if len(datasets) != len(metric_map):
+            raise ValueError("datasets and metric_map must have the same length")
+        self.max_len = max_len
         self.samples = []
-        for k in keys:
-            rec = data_dict[k]
-            fd, dv, rmsd = (
-                np.array(rec[m][1:]) for m in ("framewise_displacement", "dvars", "rmsd")
-            )
-
-            def z(x):
-                return (x - x.mean()) / (x.std() + 1e-6)
-
-            seq = np.stack([z(fd[:MAX_LEN]), z(dv[:MAX_LEN]), z(rmsd[:MAX_LEN])], axis=1)
-            # pad with zeros if shorter than MAX_LEN
-            if seq.shape[0] < MAX_LEN:
-                pad = np.zeros((MAX_LEN - seq.shape[0], 3), dtype=np.float32)
-                seq = np.vstack([seq, pad])
-            label = 1 if rec["participant_info"].get("group") == "PD" else 0
-            self.samples.append((seq.astype(np.float32), label))
+        for (data_dict, keys, label), metric in zip(datasets, metric_map):
+            for k in keys:
+                rec = data_dict[k]
+                if metric not in rec:
+                    continue
+                arr = np.array(rec[metric])
+                # For PPMI, skip first value to match old behavior
+                if arr.shape[0] > 1 and metric in ("framewise_displacement", "dvars", "rmsd"):
+                    arr = arr[1:]
+                # Z-score
+                arr = (arr - arr.mean()) / (arr.std() + 1e-6)
+                # Pad or truncate
+                arr = arr[:max_len]
+                if arr.shape[0] < max_len:
+                    pad = np.zeros((max_len - arr.shape[0],), dtype=np.float32)
+                    arr = np.concatenate([arr, pad])
+                self.samples.append((arr.astype(np.float32), label))
 
     def __len__(self):
         return len(self.samples)
