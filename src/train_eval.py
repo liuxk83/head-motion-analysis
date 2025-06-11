@@ -102,10 +102,11 @@ def plot_training_results(history, val_loader, model, device, class_names=None):
     plt.tight_layout()
     plt.show()
 
-def train(model, train_loader, val_loader, device, epochs=50, lr=1e-3, plot=True, class_names=None):
+def train(model, train_loader, val_loader, device,
+          epochs=50, lr=1e-3, weight_decay=0, plot=True, class_names=None):
     model.to(device)
-    optim = torch.optim.Adam(model.parameters(), lr=lr)
-    crit = nn.BCEWithLogitsLoss()
+    optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    crit = nn.CrossEntropyLoss()
     history = {'loss': [], 'acc': [], 'bal_acc': [], 'auc': []}
     for ep in range(1, epochs + 1):
         model.train()
@@ -125,8 +126,9 @@ def train(model, train_loader, val_loader, device, epochs=50, lr=1e-3, plot=True
         history['acc'].append(acc)
         history['bal_acc'].append(bal_acc)
         history['auc'].append(auc)
-        tqdm.write(
-            f"Epoch {ep:02d}/{epochs}  loss={avg_loss:.4f}  val_acc={acc:.3f}  val_bal_acc={bal_acc:.3f}  val_auc={auc:.3f}"
-        )
+        if ep % 5 == 0 or ep == epochs:
+            tqdm.write(
+                f"Epoch {ep:02d}/{epochs}  loss={avg_loss:.4f}  val_acc={acc:.3f}  val_bal_acc={bal_acc:.3f}  val_auc={auc:.3f}"
+            )
     if plot:
         plot_training_results(history, val_loader, model, device, class_names=class_names)

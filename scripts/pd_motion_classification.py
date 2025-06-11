@@ -4,7 +4,7 @@ Parkinson's disease (PD) vs Control from motion-derived rs-fMRI metrics.
 
 Usage
 -----
-python pd_motion_classification.py --data framewise_displacement_data.npz
+python pd_motion_classification.py --data data/framewise_displacement_data.npz
 """
 
 import argparse
@@ -23,8 +23,8 @@ import train_eval as te
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Train a simple sequence model on head motion data")
-    parser.add_argument("--data", type=pathlib.Path, default=pathlib.Path("framewise_displacement_data.npz"),
-                        help="Path to the input data file (default: framewise_displacement_data.npz)")
+    parser.add_argument("--data", type=pathlib.Path, default=pathlib.Path("data/framewise_displacement_data.npz"),
+                        help="Path to the input data file (default: data/framewise_displacement_data.npz)")
     parser.add_argument("--batch_size", type=int, default=32,
                         help="Batch size for training (default: 32)")
     parser.add_argument("--epochs", type=int, default=100,
