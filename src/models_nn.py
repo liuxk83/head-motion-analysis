@@ -1,3 +1,9 @@
+'''
+This module was supposed to be used for the neural network models, but we found
+it more efficient to build the models directly in the notebook.
+See `notebooks/modeling_nn.ipynb` for the actual implementations.
+'''
+
 import torch
 from torch import nn
 
